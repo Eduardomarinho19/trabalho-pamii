@@ -1,24 +1,28 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, Button, FlatList, Modal, StyleSheet, TouchableOpacity } from "react-native";
-
-type Item = {
-  id: string;
-  name: string;
-  price: number;
-  description?: string;
-  category?: string;
-  createdAt: number;
-};
+import { View, Text, TextInput, Button, FlatList, Modal, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import { addItem, updateItem, deleteItem as deleteItemService, subscribeToItems, Item } from "../services/firebaseService";
 
 export default function HomeScreen() {
   const [items, setItems] = useState<Item[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<Item | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+
+  useEffect(() => {
+    // Escutar mudanças em tempo real do Firebase
+    const unsubscribe = subscribeToItems((newItems) => {
+      console.log('Items atualizados:', newItems.length, 'itens');
+      setItems(newItems);
+    });
+    
+    // Cleanup da subscription quando o componente for desmontado
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (editing) {
@@ -44,31 +48,69 @@ export default function HomeScreen() {
     setModalVisible(true);
   }
 
-  function saveItem() {
+  async function saveItem() {
     const parsedPrice = Number(price) || 0;
-    if (!name.trim()) return; // simples validação
-
-    if (editing) {
-      setItems((s) =>
-        s.map((it) => (it.id === editing.id ? { ...it, name: name.trim(), price: parsedPrice, description: description.trim(), category: category.trim() } : it))
-      );
-    } else {
-      const newItem: Item = {
-        id: `${Date.now()}`,
-        name: name.trim(),
-        price: parsedPrice,
-        description: description.trim(),
-        category: category.trim(),
-        createdAt: Date.now(),
-      };
-      setItems((s) => [newItem, ...s]);
+    
+    if (!name.trim()) {
+      Alert.alert('Erro', 'Nome do item é obrigatório!');
+      return;
     }
-    setModalVisible(false);
+
+    setLoading(true);
+
+    try {
+      if (editing && editing.id) {
+        await updateItem(editing.id, {
+          name: name.trim(),
+          price: parsedPrice,
+          description: description.trim(),
+          category: category.trim(),
+        });
+        
+        Alert.alert('Sucesso', 'Item editado com sucesso!');
+      } else {
+        const newItem = {
+          name: name.trim(),
+          price: parsedPrice,
+          description: description.trim() || '',
+          category: category.trim() || '',
+        };
+        
+        const itemId = await addItem(newItem);
+        console.log('Item adicionado com ID:', itemId);
+        
+        if (itemId) {
+          Alert.alert('Sucesso', 'Item adicionado com sucesso!');
+        } else {
+          throw new Error('Falha ao adicionar item');
+        }
+      }
+      
+      setModalVisible(false);
+      setName("");
+      setPrice("");
+      setDescription("");
+      setCategory("");
+      
+    } catch (error) {
+      console.error('Erro ao salvar item:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      Alert.alert('Erro', `Falha ao salvar: ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function deleteItem(id: string) {
-    setItems((s) => s.filter((it) => it.id !== id));
+  async function handleDeleteItem(id: string) {
+    try {
+      await deleteItemService(id);
+    } catch (error) {
+      console.error('Erro ao deletar item:', error);
+      Alert.alert('Erro', 'Não foi possível deletar o item. Tente novamente.');
+    }
   }
+
+
 
   return (
     <View style={styles.container}>
@@ -78,10 +120,11 @@ export default function HomeScreen() {
         <Button title="Adicionar item" onPress={openCreate} />
       </View>
 
+
       <FlatList
         data={items}
-        keyExtractor={(i) => i.id}
-        ListEmptyComponent={<Text style={styles.empty}>Nenhum item. Clique em "Adicionar item".</Text>}
+        keyExtractor={(i) => i.id || `${Date.now()}-${Math.random()}`}
+        ListEmptyComponent={<Text style={styles.empty}>Nenhum item. Clique em &quot;Adicionar item&quot;.</Text>}
         renderItem={({ item }) => (
           <View style={styles.card}>
             <View style={{ flex: 1 }}>
@@ -96,7 +139,10 @@ export default function HomeScreen() {
               <TouchableOpacity onPress={() => openEdit(item)} style={styles.actionBtn}>
                 <Text style={styles.actionText}>Editar</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => deleteItem(item.id)} style={[styles.actionBtn, { backgroundColor: "#d9534f" }]}>
+              <TouchableOpacity 
+                onPress={() => item.id && handleDeleteItem(item.id)} 
+                style={[styles.actionBtn, { backgroundColor: "#d9534f" }]}
+              >
                 <Text style={[styles.actionText, { color: "#fff" }]}>Apagar</Text>
               </TouchableOpacity>
             </View>
@@ -121,8 +167,8 @@ export default function HomeScreen() {
           <TextInput style={styles.input} value={category} onChangeText={setCategory} placeholder="Ex: Alimentação" />
 
           <View style={styles.modalActions}>
-            <Button title="Cancelar" onPress={() => setModalVisible(false)} />
-            <Button title="Salvar" onPress={saveItem} />
+            <Button title="Cancelar" onPress={() => setModalVisible(false)} disabled={loading} />
+            <Button title={loading ? "Salvando..." : "Salvar"} onPress={saveItem} disabled={loading} />
           </View>
         </View>
       </Modal>
