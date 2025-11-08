@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, Button, FlatList, Modal, StyleSheet, TouchableOpacity, Alert } from "react-native";
-import { addItem, updateItem, deleteItem as deleteItemService, subscribeToItems, Item } from "../services/firebaseService";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import { Alert, Button, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { logoutUser } from "../services/authService";
+import { addItem, deleteItem as deleteItemService, Item, subscribeToItems, updateItem } from "../services/firebaseService";
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [items, setItems] = useState<Item[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<Item | null>(null);
@@ -110,11 +113,42 @@ export default function HomeScreen() {
     }
   }
 
+  async function handleLogout() {
+    console.log('handleLogout chamado!');
+    
+    const confirmLogout = window.confirm('Tem certeza que deseja sair?');
+    
+    if (confirmLogout) {
+      await performLogout();
+    } else {
+      console.log('Logout cancelado');
+    }
+  }
+
+  async function performLogout() {
+    try {
+      console.log('Fazendo logout...');
+      await logoutUser();
+      console.log('Logout concluído, redirecionando para login...');
+      router.push('/login' as any);
+      console.log('Router.push executado');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      alert('Erro ao fazer logout. Tente novamente.');
+    }
+  }
+
 
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Lista de Compras</Text>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Sair</Text>
+        </TouchableOpacity>
+        <Text style={styles.title}>Lista de Compras</Text>
+        <View style={styles.headerSpacer} />
+      </View>
 
       <View style={styles.controls}>
         <Button title="Adicionar item" onPress={openCreate} />
@@ -178,7 +212,27 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: "#fff" },
-  title: { fontSize: 22, fontWeight: "700", marginBottom: 12 },
+  header: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  logoutButton: {
+    backgroundColor: "#d9534f",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  logoutButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  headerSpacer: {
+    width: 60,
+  },
+  title: { fontSize: 22, fontWeight: "700", flex: 1, textAlign: "center" },
   controls: { marginBottom: 12 },
   empty: { textAlign: "center", marginTop: 40, color: "#666" },
   card: { flexDirection: "row", padding: 12, borderWidth: 1, borderColor: "#e0e0e0", borderRadius: 8, marginBottom: 8, alignItems: "center" },
