@@ -1,9 +1,10 @@
 import {
-    createUserWithEmailAndPassword,
-    onAuthStateChanged,
-    signInWithEmailAndPassword,
-    signOut,
-    User
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signOut,
+  User
 } from 'firebase/auth';
 import { auth } from './firebaseConfig';
 
@@ -53,6 +54,18 @@ export const observeAuthState = (callback: (user: User | null) => void) => {
 // Obter usuário atual
 export const getCurrentUser = (): User | null => {
   return auth.currentUser;
+};
+
+// Enviar email de recuperação de senha
+export const resetPassword = async (email: string): Promise<void> => {
+  try {
+    console.log('Enviando email de recuperação para:', email);
+    await sendPasswordResetEmail(auth, email);
+    console.log('Email de recuperação enviado com sucesso');
+  } catch (error: any) {
+    console.error('Erro ao enviar email de recuperação:', error);
+    throw new Error(getAuthErrorMessage(error.code));
+  }
 };
 
 // Traduzir mensagens de erro

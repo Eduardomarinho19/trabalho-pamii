@@ -1,14 +1,14 @@
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  doc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  orderBy,
-  onSnapshot,
-  Timestamp 
+import {
+    addDoc,
+    collection,
+    deleteDoc,
+    doc,
+    getDocs,
+    onSnapshot,
+    orderBy,
+    query,
+    Timestamp,
+    updateDoc
 } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 
@@ -84,6 +84,7 @@ export const subscribeToItems = (callback: (items: Item[]) => void) => {
       id: doc.id,
       ...doc.data()
     } as Item));
+    // Removi o console.log para não poluir o console
     callback(items);
   });
 };

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -13,16 +13,25 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { useAuth } from '../contexts/AuthContext';
 import { registerUser } from '../services/authService';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Redirecionar se já estiver autenticado
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      router.replace('/');
+    }
+  }, [isAuthenticated, authLoading, router]);
 
   const handleRegister = async () => {
     // Validações
@@ -46,13 +55,13 @@ export default function RegisterScreen() {
     try {
       await registerUser(email.trim(), password);
       console.log('Cadastro realizado com sucesso!');
-      alert('Cadastro realizado com sucesso! Faça login para continuar.');
+      Alert.alert('Sucesso', 'Cadastro realizado com sucesso! Faça login para continuar.');
       console.log('Redirecionando para tela de login...');
-      router.push('/login' as any);
+      router.push('/login');
     } catch (error) {
       console.error('Erro no cadastro:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro ao cadastrar';
-      alert('Erro no cadastro: ' + errorMessage);
+      Alert.alert('Erro', 'Erro no cadastro: ' + errorMessage);
     } finally {
       setLoading(false);
     }
@@ -191,10 +200,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 20,
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
     elevation: 3,
   },
   label: {

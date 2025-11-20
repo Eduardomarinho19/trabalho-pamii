@@ -1,16 +1,16 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { enableIndexedDbPersistence, getFirestore } from 'firebase/firestore';
 
-// Configurações do Firebase
+// Configurações do Firebase - usando variáveis de ambiente
 const firebaseConfig = {
-    apiKey: "AIzaSyB55lSV0vbm_X1PSiA41o12g87Ko-RY6TE",
-    authDomain: "lista-de-compras-50a2d.firebaseapp.com",
-    projectId: "lista-de-compras-50a2d",
-    storageBucket: "lista-de-compras-50a2d.firebasestorage.app",
-    messagingSenderId: "983841050637",
-    appId: "1:983841050637:web:15a4fd41ce0fc1fe2e8544",
-    measurementId: "G-J03M5MDH0F"
+    apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+    measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
 // Inicializa o Firebase
@@ -18,6 +18,17 @@ const app = initializeApp(firebaseConfig);
 
 // Inicializa o Firestore
 export const db = getFirestore(app);
+
+// Habilitar persistência offline (apenas para web)
+if (typeof window !== 'undefined') {
+  enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code === 'failed-precondition') {
+      // Múltiplas abas abertas, persistência desabilitada
+    } else if (err.code === 'unimplemented') {
+      // Navegador não suporta persistência
+    }
+  });
+}
 
 // Inicializa o Auth
 export const auth = getAuth(app);
