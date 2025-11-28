@@ -1,50 +1,122 @@
-# Welcome to your Expo app 👋
+# 🛒 Lista de Compras
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplicativo de lista de compras desenvolvido com React Native, Expo e Firebase. Permite que usuários gerenciem seus itens de compra de forma simples e eficiente, com sincronização em tempo real e suporte para múltiplas plataformas (iOS, Android e Web).
 
-## Get started
+## 📋 Funcionalidades
 
-1. Install dependencies
+- **Autenticação de Usuários**
+  - Cadastro e login com email e senha
+  - Recuperação de senha via email
+  - Perfil de usuário editável
+  - Logout seguro
 
+- **Gerenciamento de Itens**
+  - Adicionar novos itens à lista
+  - Editar itens existentes
+  - Excluir itens
+  - Busca por nome ou descrição
+  - Visualização do valor total da lista
+
+- **Interface**
+  - Tema claro e escuro
+  - Design responsivo para web e mobile
+  - Sincronização em tempo real com Firebase
+  - Validação de formulários
+
+- **Segurança**
+  - Dados isolados por usuário
+  - Regras de segurança no Firestore
+  - Credenciais gerenciadas por variáveis de ambiente
+
+## 🚀 Como Executar o Projeto
+
+### Pré-requisitos
+
+- Node.js (versão 16 ou superior)
+- npm ou yarn
+- Expo CLI (instalado globalmente ou via npx)
+
+### Passo a Passo
+
+1. **Clone o repositório**
+   ```bash
+   git clone https://github.com/Eduardomarinho19/trabalho-pamii.git
+   cd trabalho-pamii
+   ```
+
+2. **Instale as dependências**
    ```bash
    npm install
    ```
 
-2. Start the app
+3. **Configure as variáveis de ambiente**
+   
+   O arquivo `.env` já está incluído no repositório com as credenciais do Firebase configuradas.
 
+4. **Inicie o servidor de desenvolvimento**
+   ```bash
+   npm start
+   ```
+   
+   ou
+   
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+5. **Execute o aplicativo**
+   
+   Após iniciar, você terá as seguintes opções:
+   - Pressione `w` para abrir no navegador (web)
+   - Pressione `a` para abrir no emulador Android
+   - Pressione `i` para abrir no simulador iOS
+   - Escaneie o QR Code com o app Expo Go no seu smartphone
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 🛠️ Tecnologias Utilizadas
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- **React Native** - Framework para desenvolvimento mobile
+- **Expo** - Plataforma para desenvolvimento universal
+- **TypeScript** - Tipagem estática para JavaScript
+- **Firebase Authentication** - Autenticação de usuários
+- **Cloud Firestore** - Banco de dados NoSQL em tempo real
+- **Expo Router** - Navegação baseada em arquivos
+- **Context API** - Gerenciamento de estado global
 
-## Get a fresh project
+## 📁 Estrutura do Projeto
 
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+trabalho-pamii/
+├── app/                    # Telas da aplicação (Expo Router)
+│   ├── index.tsx          # Tela principal (lista de itens)
+│   ├── login.tsx          # Tela de login
+│   ├── register.tsx       # Tela de cadastro
+│   ├── profile.tsx        # Tela de perfil
+│   └── reset-password.tsx # Recuperação de senha
+├── components/            # Componentes reutilizáveis
+│   ├── ItemCard.tsx      # Card de exibição de item
+│   └── ItemForm.tsx      # Formulário de item
+├── contexts/             # Contextos React
+│   ├── AuthContext.tsx   # Autenticação
+│   └── ThemeContext.tsx  # Tema claro/escuro
+├── database/             # Configurações do Firebase
+│   └── services/
+│       ├── firebaseConfig.ts
+│       └── firebaseService.ts
+├── services/             # Serviços da aplicação
+│   ├── authService.ts    # Serviços de autenticação
+│   └── userService.ts    # Serviços de usuário
+├── utils/                # Utilitários
+│   └── Alert.ts          # Alert universal (web/mobile)
+├── constants/            # Constantes
+│   └── theme.ts          # Configurações de tema
+└── .env                  # Variáveis de ambiente
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## 👤 Autor
 
-## Learn more
+Desenvolvido para a disciplina de Programação para Aplicativos Móveis II.
 
-To learn more about developing your project with Expo, look at the following resources:
+## 📄 Licença
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Este projeto é de código aberto e está disponível para fins educacionais.
 
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.

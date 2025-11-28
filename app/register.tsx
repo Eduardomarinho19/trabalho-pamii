@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -15,6 +14,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { registerUser } from '../services/authService';
+import { Alert } from '../utils/Alert';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -25,6 +25,12 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Validação de email
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
   // Redirecionar se já estiver autenticado
   useEffect(() => {
@@ -37,6 +43,11 @@ export default function RegisterScreen() {
     // Validações
     if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
       Alert.alert('Erro', 'Preencha todos os campos');
+      return;
+    }
+
+    if (!isValidEmail(email.trim())) {
+      Alert.alert('Erro', 'Por favor, insira um e-mail válido');
       return;
     }
 
@@ -54,14 +65,12 @@ export default function RegisterScreen() {
 
     try {
       await registerUser(email.trim(), password);
-      console.log('Cadastro realizado com sucesso!');
       Alert.alert('Sucesso', 'Cadastro realizado com sucesso! Faça login para continuar.');
-      console.log('Redirecionando para tela de login...');
       router.push('/login');
     } catch (error) {
       console.error('Erro no cadastro:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro ao cadastrar';
-      Alert.alert('Erro', 'Erro no cadastro: ' + errorMessage);
+      Alert.alert('Erro', errorMessage);
     } finally {
       setLoading(false);
     }

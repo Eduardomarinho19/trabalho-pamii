@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -15,6 +14,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { loginUser } from '../services/authService';
+import { Alert } from '../utils/Alert';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -23,6 +23,12 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Validação de email
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
   // Redirecionar se já estiver autenticado
   useEffect(() => {
@@ -38,18 +44,26 @@ export default function LoginScreen() {
       return;
     }
 
+    if (!isValidEmail(email.trim())) {
+      Alert.alert('Erro', 'Por favor, insira um e-mail válido');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
     setLoading(true);
 
     try {
       await loginUser(email.trim(), password);
-      console.log('Login realizado com sucesso!');
       Alert.alert('Sucesso', 'Login realizado com sucesso!');
-      console.log('Redirecionando para tela inicial...');
       router.replace('/');
     } catch (error) {
       console.error('Erro no login:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro ao fazer login';
-      Alert.alert('Erro', 'Erro no login: ' + errorMessage);
+      Alert.alert('Erro', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -118,6 +132,14 @@ export default function LoginScreen() {
               ) : (
                 <Text style={styles.buttonText}>Entrar</Text>
               )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => router.push('/reset-password')} 
+              disabled={loading}
+              style={styles.forgotPassword}
+            >
+              <Text style={styles.forgotPasswordText}>Esqueceu sua senha?</Text>
             </TouchableOpacity>
 
             <View style={styles.footer}>
@@ -215,6 +237,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  forgotPassword: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  forgotPasswordText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '500',
   },
   footer: {
     flexDirection: 'row',

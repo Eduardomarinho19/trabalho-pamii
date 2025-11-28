@@ -1,19 +1,17 @@
 import {
-  createUserWithEmailAndPassword,
-  onAuthStateChanged,
-  sendPasswordResetEmail,
-  signInWithEmailAndPassword,
-  signOut,
-  User
+    createUserWithEmailAndPassword,
+    onAuthStateChanged,
+    sendPasswordResetEmail,
+    signInWithEmailAndPassword,
+    signOut,
+    User
 } from 'firebase/auth';
-import { auth } from './firebaseConfig';
+import { auth } from '../database/services/firebaseConfig';
 
 // Cadastrar novo usuário
 export const registerUser = async (email: string, password: string): Promise<User> => {
   try {
-    console.log('Tentando cadastrar usuário:', email);
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    console.log('Usuário cadastrado com sucesso:', userCredential.user.uid);
     return userCredential.user;
   } catch (error: any) {
     console.error('Erro ao cadastrar usuário:', error);
@@ -24,9 +22,7 @@ export const registerUser = async (email: string, password: string): Promise<Use
 // Fazer login
 export const loginUser = async (email: string, password: string): Promise<User> => {
   try {
-    console.log('Tentando fazer login:', email);
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    console.log('Login realizado com sucesso:', userCredential.user.uid);
     return userCredential.user;
   } catch (error: any) {
     console.error('Erro ao fazer login:', error);
@@ -37,9 +33,7 @@ export const loginUser = async (email: string, password: string): Promise<User> 
 // Fazer logout
 export const logoutUser = async (): Promise<void> => {
   try {
-    console.log('Fazendo logout...');
     await signOut(auth);
-    console.log('Logout realizado com sucesso');
   } catch (error) {
     console.error('Erro ao fazer logout:', error);
     throw error;
@@ -59,9 +53,7 @@ export const getCurrentUser = (): User | null => {
 // Enviar email de recuperação de senha
 export const resetPassword = async (email: string): Promise<void> => {
   try {
-    console.log('Enviando email de recuperação para:', email);
     await sendPasswordResetEmail(auth, email);
-    console.log('Email de recuperação enviado com sucesso');
   } catch (error: any) {
     console.error('Erro ao enviar email de recuperação:', error);
     throw new Error(getAuthErrorMessage(error.code));

@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Theme } from '../constants/theme';
-import { Item } from '../services/firebaseService';
+import { Item } from '../database/services/firebaseService';
 
 export function ItemCard({
   item,

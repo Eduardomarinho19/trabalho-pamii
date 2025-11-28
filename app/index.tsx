@@ -1,24 +1,28 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Modal, Platform, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, FlatList, Modal, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { ItemCard } from "../components/ItemCard";
 import { ItemForm } from "../components/ItemForm";
+import { Theme } from "../constants/theme";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
+import { addItem, deleteItem as deleteItemService, Item, subscribeToItems, updateItem } from "../database/services/firebaseService";
 import { logoutUser } from "../services/authService";
-import { addItem, deleteItem as deleteItemService, Item, subscribeToItems, updateItem } from "../services/firebaseService";
+import { Alert } from "../utils/Alert";
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { theme, isDarkMode, toggleTheme } = useTheme();
   const [items, setItems] = useState<Item[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<Item | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  // Otimizar styles com useMemo para evitar recriação a cada render
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   // Redirecionar para login se não estiver autenticado
   useEffect(() => {
@@ -29,37 +33,26 @@ export default function HomeScreen() {
 
   useEffect(() => {
     // Escutar mudanças em tempo real do Firebase
-    const unsubscribe = subscribeToItems((newItems) => {
-      setItems(newItems);
-    });
-    
-    // Cleanup da subscription quando o componente for desmontado
-    return () => unsubscribe();
-  }, []);
+    if (isAuthenticated && user) {
+      const unsubscribe = subscribeToItems(user.uid, (newItems) => {
+        setItems(newItems);
+      });
+      
+      // Cleanup da subscription quando o componente for desmontado
+      return () => unsubscribe();
+    }
+  }, [isAuthenticated, user]);
 
-  // Categorias únicas disponíveis
-  const categories = useMemo(() => {
-    const cats = new Set<string>();
-    items.forEach(item => {
-      if (item.category && item.category.trim()) {
-        cats.add(item.category.trim());
-      }
-    });
-    return Array.from(cats).sort();
-  }, [items]);
-
-  // Filtrar itens por busca e categoria
+  // Filtrar itens por busca
   const filteredItems = useMemo(() => {
     return items.filter(item => {
       const matchesSearch = searchText === "" || 
         item.name.toLowerCase().includes(searchText.toLowerCase()) ||
         (item.description && item.description.toLowerCase().includes(searchText.toLowerCase()));
       
-      const matchesCategory = selectedCategory === null || item.category === selectedCategory;
-      
-      return matchesSearch && matchesCategory;
+      return matchesSearch;
     });
-  }, [items, searchText, selectedCategory]);
+  }, [items, searchText]);
 
   // Calcular total dos itens filtrados
   const totalValue = useMemo(() => {
@@ -82,6 +75,11 @@ export default function HomeScreen() {
       return;
     }
 
+    if (!user) {
+      Alert.alert('Erro', 'Usuário não autenticado');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -100,10 +98,10 @@ export default function HomeScreen() {
           price: data.price,
           description: data.description || '',
           category: data.category || '',
+          userId: user.uid,
         };
         
-        const itemId = await addItem(newItem);
-        console.log('Item adicionado com ID:', itemId);
+        const itemId = await addItem(newItem, user.uid);
         
         if (itemId) {
           Alert.alert('Sucesso', 'Item adicionado com sucesso!');
@@ -151,50 +149,32 @@ export default function HomeScreen() {
   }
 
   async function handleLogout() {
-    console.log('handleLogout chamado');
-    
-    if (Platform.OS === 'web') {
-      // No web, usar window.confirm
-      const confirmLogout = window.confirm('Tem certeza que deseja sair?');
-      console.log('Confirmação:', confirmLogout);
-      if (confirmLogout) {
-        await performLogout();
-      }
-    } else {
-      // No mobile, usar Alert.alert
-      Alert.alert(
-        'Confirmar Saída',
-        'Tem certeza que deseja sair?',
-        [
-          {
-            text: 'Cancelar',
-            style: 'cancel',
-          },
-          {
-            text: 'Sair',
-            style: 'destructive',
-            onPress: performLogout,
-          },
-        ]
-      );
-    }
+    Alert.alert(
+      'Confirmar Saída',
+      'Tem certeza que deseja sair?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Sair',
+          style: 'destructive',
+          onPress: performLogout,
+        },
+      ]
+    );
   }
 
   async function performLogout() {
     try {
       setLoading(true);
-      console.log('Fazendo logout...');
       await logoutUser();
-      console.log('Logout concluído com sucesso');
       // Força o redirecionamento imediatamente
       router.replace('/login');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
-      if (Platform.OS === 'web') {
-        window.alert('Erro ao fazer logout. Tente novamente.');
-      } else {
-        Alert.alert('Erro', 'Erro ao fazer logout. Tente novamente.');
-      }
+      Alert.alert('Erro', 'Erro ao fazer logout. Tente novamente.');
       setLoading(false);
     }
   }
@@ -202,18 +182,18 @@ export default function HomeScreen() {
   // Mostrar loading enquanto verifica autenticação
   if (authLoading) {
     return (
-      <View style={[styles(theme).container, styles(theme).centered, { backgroundColor: theme.background }]}>
+      <View style={[styles.container, styles.centered, { backgroundColor: theme.background }]}>
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={[styles(theme).loadingText, { color: theme.text }]}>Carregando...</Text>
+        <Text style={[styles.loadingText, { color: theme.text }]}>Carregando...</Text>
       </View>
     );
   }
 
   return (
-    <View style={[styles(theme).container, { backgroundColor: theme.background }]}>
-      <View style={styles(theme).header}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={styles.header}>
         {/* Toggle Dark Mode */}
-        <View style={styles(theme).themeToggle}>
+        <View style={styles.themeToggle}>
           <Ionicons 
             name={isDarkMode ? "moon" : "sunny"} 
             size={20} 
@@ -227,23 +207,23 @@ export default function HomeScreen() {
           />
         </View>
         
-        <Text style={[styles(theme).title, { color: theme.text }]}>Lista de Compras</Text>
+        <Text style={[styles.title, { color: theme.text }]}>Lista de Compras</Text>
         
-        <View style={styles(theme).headerActions}>
-          <TouchableOpacity onPress={() => router.push('/profile')} style={styles(theme).iconButton}>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={() => router.push('/profile')} style={styles.iconButton}>
             <Ionicons name="person-circle-outline" size={28} color={theme.text} />
           </TouchableOpacity>
-          <TouchableOpacity style={[styles(theme).logoutButton, { backgroundColor: theme.danger }]} onPress={handleLogout}>
+          <TouchableOpacity style={[styles.logoutButton, { backgroundColor: theme.danger }]} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={18} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Barra de busca */}
-      <View style={[styles(theme).searchContainer, { backgroundColor: theme.inputBackground }]}>
-        <Ionicons name="search" size={20} color={theme.textSecondary} style={styles(theme).searchIcon} />
+      <View style={[styles.searchContainer, { backgroundColor: theme.inputBackground }]}>
+        <Ionicons name="search" size={20} color={theme.textSecondary} style={styles.searchIcon} />
         <TextInput
-          style={[styles(theme).searchInput, { color: theme.text }]}
+          style={[styles.searchInput, { color: theme.text }]}
           placeholder="Buscar itens..."
           value={searchText}
           onChangeText={setSearchText}
@@ -256,44 +236,19 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* Filtros de categoria */}
-      {categories.length > 0 && (
-        <View style={styles(theme).categoriesContainer}>
-          <TouchableOpacity
-            style={[styles(theme).categoryChip, selectedCategory === null && styles(theme).categoryChipActive]}
-            onPress={() => setSelectedCategory(null)}
-          >
-            <Text style={[styles(theme).categoryChipText, selectedCategory === null && styles(theme).categoryChipTextActive]}>
-              Todas
-            </Text>
-          </TouchableOpacity>
-          {categories.map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              style={[styles(theme).categoryChip, selectedCategory === cat && styles(theme).categoryChipActive]}
-              onPress={() => setSelectedCategory(cat)}
-            >
-              <Text style={[styles(theme).categoryChipText, selectedCategory === cat && styles(theme).categoryChipTextActive]}>
-                {cat}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-
       {/* Botão de adicionar */}
-      <TouchableOpacity style={styles(theme).addButton} onPress={openCreate}>
+      <TouchableOpacity style={styles.addButton} onPress={openCreate}>
         <Ionicons name="add-circle" size={24} color="#fff" />
-        <Text style={styles(theme).addButtonText}>Adicionar Item</Text>
+        <Text style={styles.addButtonText}>Adicionar Item</Text>
       </TouchableOpacity>
 
       {/* Total da lista */}
       {filteredItems.length > 0 && (
-        <View style={styles(theme).totalContainer}>
-          <Text style={styles(theme).totalLabel}>
+        <View style={styles.totalContainer}>
+          <Text style={styles.totalLabel}>
             Total ({filteredItems.length} {filteredItems.length === 1 ? 'item' : 'itens'}):
           </Text>
-          <Text style={styles(theme).totalValue}>R$ {totalValue.toFixed(2)}</Text>
+          <Text style={styles.totalValue}>R$ {totalValue.toFixed(2)}</Text>
         </View>
       )}
 
@@ -301,9 +256,9 @@ export default function HomeScreen() {
         data={filteredItems}
         keyExtractor={(i) => i.id || `${Date.now()}-${Math.random()}`}
         ListEmptyComponent={
-          <Text style={styles(theme).empty}>
-            {searchText || selectedCategory 
-              ? "Nenhum item encontrado com os filtros aplicados."
+          <Text style={styles.empty}>
+            {searchText 
+              ? "Nenhum item encontrado."
               : 'Nenhum item. Clique em "Adicionar item".'}
           </Text>
         }
@@ -318,8 +273,8 @@ export default function HomeScreen() {
       />
 
       <Modal visible={modalVisible} animationType="slide" onRequestClose={() => setModalVisible(false)}>
-        <View style={styles(theme).modal}>
-          <Text style={styles(theme).modalTitle}>{editing ? "Editar item" : "Novo item"}</Text>
+        <View style={styles.modal}>
+          <Text style={styles.modalTitle}>{editing ? "Editar item" : "Novo item"}</Text>
           
           <ItemForm
             initial={editing || undefined}
@@ -336,7 +291,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = (theme: any) => StyleSheet.create({
+const createStyles = (theme: Theme) => StyleSheet.create({
   container: { flex: 1, padding: 16 },
   header: { 
     flexDirection: "row", 

@@ -3,15 +3,13 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     KeyboardAvoidingView,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -20,6 +18,7 @@ import {
     saveUserProfile,
     UserProfile,
 } from '../services/userService';
+import { Alert } from '../utils/Alert';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -77,21 +76,13 @@ export default function ProfileScreen() {
       setLoading(true);
       await saveUserProfile(user.uid, { displayName: displayName.trim() });
       
-      if (Platform.OS === 'web') {
-        window.alert('Perfil atualizado com sucesso!');
-      } else {
-        Alert.alert('Sucesso', 'Perfil atualizado com sucesso!');
-      }
+      Alert.alert('Sucesso', 'Perfil atualizado com sucesso!');
       
       loadProfile();
     } catch (error) {
       console.error('Erro ao salvar perfil:', error);
       
-      if (Platform.OS === 'web') {
-        window.alert('Não foi possível salvar o perfil');
-      } else {
-        Alert.alert('Erro', 'Não foi possível salvar o perfil');
-      }
+      Alert.alert('Erro', 'Não foi possível salvar o perfil');
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Item } from '../services/firebaseService';
+import { Item } from '../database/services/firebaseService';
 
 type Props = {
   initial?: Partial<Item>;
@@ -14,34 +14,102 @@ export function ItemForm({ initial, onCancel, onSubmit, loading = false }: Props
   const [price, setPrice] = useState(String(initial?.price ?? ''));
   const [description, setDescription] = useState(initial?.description ?? '');
   const [category, setCategory] = useState(initial?.category ?? '');
+  const [errors, setErrors] = useState<{ name?: string; price?: string }>({});
 
   useEffect(() => {
     setName(initial?.name ?? '');
     setPrice(initial?.price ? String(initial.price) : '');
     setDescription(initial?.description ?? '');
     setCategory(initial?.category ?? '');
+    setErrors({});
   }, [initial]);
+
+  const validateForm = (): boolean => {
+    const newErrors: { name?: string; price?: string } = {};
+
+    // Validar nome
+    if (!name.trim()) {
+      newErrors.name = 'Nome é obrigatório';
+    } else if (name.trim().length < 2) {
+      newErrors.name = 'Nome deve ter pelo menos 2 caracteres';
+    }
+
+    // Validar preço
+    const priceNum = parseFloat(price);
+    if (!price.trim()) {
+      newErrors.price = 'Preço é obrigatório';
+    } else if (isNaN(priceNum)) {
+      newErrors.price = 'Preço deve ser um número válido';
+    } else if (priceNum < 0) {
+      newErrors.price = 'Preço não pode ser negativo';
+    } else if (priceNum === 0) {
+      newErrors.price = 'Preço deve ser maior que zero';
+    } else if (priceNum > 999999) {
+      newErrors.price = 'Preço máximo: R$ 999.999,00';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = () => {
+    if (validateForm()) {
+      onSubmit({
+        name: name.trim(),
+        price: parseFloat(price),
+        description: description.trim(),
+        category: category.trim(),
+      });
+    }
+  };
+
+  const handlePriceChange = (text: string) => {
+    // Permitir apenas números, vírgula e ponto decimal
+    const cleaned = text.replace(/[^0-9.,]/g, '');
+    
+    // Substituir vírgula por ponto para cálculos internos
+    const normalized = cleaned.replace(',', '.');
+    
+    // Garantir apenas um separador decimal
+    const parts = normalized.split('.');
+    if (parts.length > 2) {
+      setPrice(parts[0] + '.' + parts.slice(1).join(''));
+    } else {
+      setPrice(normalized);
+    }
+  };
 
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Nome do item</Text>
       <TextInput 
-        style={styles.input} 
+        style={[styles.input, errors.name && styles.inputError]} 
         value={name} 
-        onChangeText={setName} 
+        onChangeText={(text) => {
+          setName(text);
+          if (errors.name) setErrors({ ...errors, name: undefined });
+        }}
         placeholder="Ex: Arroz" 
         editable={!loading}
       />
+      {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
 
       <Text style={styles.label}>Valor do item</Text>
-      <TextInput
-        style={styles.input}
-        value={price}
-        onChangeText={(t) => setPrice(t)}
-        keyboardType="numeric"
-        placeholder="Ex: 12.50"
-        editable={!loading}
-      />
+      <View style={[styles.priceInputContainer, errors.price && styles.inputError]}>
+        <Text style={styles.currencySymbol}>R$</Text>
+        <TextInput
+          style={styles.priceInput}
+          value={price}
+          onChangeText={(text) => {
+            handlePriceChange(text);
+            if (errors.price) setErrors({ ...errors, price: undefined });
+          }}
+          keyboardType="decimal-pad"
+          placeholder="0,00"
+          editable={!loading}
+        />
+      </View>
+      {errors.price && <Text style={styles.errorText}>{errors.price}</Text>}
 
       <Text style={styles.label}>Descrição</Text>
       <TextInput 
@@ -72,14 +140,7 @@ export function ItemForm({ initial, onCancel, onSubmit, loading = false }: Props
         
         <TouchableOpacity 
           style={[styles.button, styles.submitButton, loading && styles.buttonDisabled]} 
-          onPress={() =>
-            onSubmit({
-              name: name.trim(),
-              price: Number(price) || 0,
-              description: description.trim(),
-              category: category.trim(),
-            })
-          }
+          onPress={handleSubmit}
           disabled={loading}
         >
           {loading ? (
@@ -108,6 +169,37 @@ const styles = StyleSheet.create({
     padding: 10,
     minHeight: 40,
     backgroundColor: "#fff",
+  },
+  priceInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 6,
+    backgroundColor: "#fff",
+    paddingLeft: 12,
+  },
+  currencySymbol: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#007AFF",
+    marginRight: 8,
+  },
+  priceInput: {
+    flex: 1,
+    padding: 10,
+    minHeight: 40,
+    fontSize: 16,
+  },
+  inputError: {
+    borderColor: "#d9534f",
+    borderWidth: 2,
+  },
+  errorText: {
+    color: "#d9534f",
+    fontSize: 12,
+    marginTop: 4,
+    marginBottom: 8,
   },
   buttons: { 
     flexDirection: 'row', 

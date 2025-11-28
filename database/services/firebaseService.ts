@@ -1,14 +1,15 @@
 import {
-    addDoc,
-    collection,
-    deleteDoc,
-    doc,
-    getDocs,
-    onSnapshot,
-    orderBy,
-    query,
-    Timestamp,
-    updateDoc
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  onSnapshot,
+  orderBy,
+  query,
+  Timestamp,
+  updateDoc,
+  where
 } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 
@@ -18,16 +19,18 @@ export type Item = {
   price: number;
   description?: string;
   category?: string;
+  userId: string;
   createdAt: Timestamp | number;
 };
 
 const COLLECTION_NAME = 'items';
 
 // Adicionar um novo item
-export const addItem = async (item: Omit<Item, 'id' | 'createdAt'>) => {
+export const addItem = async (item: Omit<Item, 'id' | 'createdAt'>, userId: string) => {
   try {
     const docRef = await addDoc(collection(db, COLLECTION_NAME), {
       ...item,
+      userId,
       createdAt: Timestamp.now()
     });
     return docRef.id;
@@ -37,10 +40,14 @@ export const addItem = async (item: Omit<Item, 'id' | 'createdAt'>) => {
   }
 };
 
-// Buscar todos os itens
-export const getItems = async (): Promise<Item[]> => {
+// Buscar todos os itens do usuário
+export const getItems = async (userId: string): Promise<Item[]> => {
   try {
-    const q = query(collection(db, COLLECTION_NAME), orderBy('createdAt', 'desc'));
+    const q = query(
+      collection(db, COLLECTION_NAME),
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
     const querySnapshot = await getDocs(q);
     
     return querySnapshot.docs.map(doc => ({
@@ -76,15 +83,18 @@ export const deleteItem = async (id: string) => {
 };
 
 // Escutar mudanças em tempo real
-export const subscribeToItems = (callback: (items: Item[]) => void) => {
-  const q = query(collection(db, COLLECTION_NAME), orderBy('createdAt', 'desc'));
+export const subscribeToItems = (userId: string, callback: (items: Item[]) => void) => {
+  const q = query(
+    collection(db, COLLECTION_NAME),
+    where('userId', '==', userId),
+    orderBy('createdAt', 'desc')
+  );
   
   return onSnapshot(q, (querySnapshot) => {
     const items = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     } as Item));
-    // Removi o console.log para não poluir o console
     callback(items);
   });
 };

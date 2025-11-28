@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from './firebaseConfig';
+import { db } from '../database/services/firebaseConfig';
 
 export type UserProfile = {
   uid: string;
